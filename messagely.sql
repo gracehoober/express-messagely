@@ -23,6 +23,32 @@ CREATE TABLE messages (
   sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
   read_at TIMESTAMP WITH TIME ZONE);
 
+INSERT INTO users (
+  username,
+  password,
+  first_name,
+  last_name,
+  phone,
+  join_at,
+  last_login_at
+)
+  VALUES (
+    'test', 'password', 'John', 'Smith', '1111111', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    ),
+    (
+    'tuckerdiane', 'password', 'Tucker', 'Diane', '1111111', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP
+    );
+-- FIXME: INSERTS
+INSERT INTO messages (
+  from_username,
+  to_username,
+  body,
+  sent_at
+)
+  VALUES (
+    'test', 'tuckerdiane', 'TEST TEXT', CURRENT_TIMESTAMP
+  );
+
 
 \echo 'Delete and recreate messagely_test db?'
 \prompt 'Return for yes or control-C to cancel > ' foo
@@ -47,4 +73,3 @@ CREATE TABLE messages (
   body TEXT NOT NULL,
   sent_at TIMESTAMP WITH TIME ZONE NOT NULL,
   read_at TIMESTAMP WITH TIME ZONE);
-
