@@ -27,7 +27,7 @@ class User {
       ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
       RETURNING username, password, first_name, last_name, phone`,
       [username, hashedPassword, first_name, last_name, phone]
-    )
+    );
     return result.rows[0];
   }
 
@@ -38,8 +38,8 @@ class User {
       `SELECT username, password
         FROM users
         WHERE username = $1`,
-        [username]
-    )
+      [username]
+    );
 
     const user = result.rows[0];
     if (user === undefined) throw new BadRequestError(`Could not find ${username}`);
@@ -54,14 +54,14 @@ class User {
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    try{
+    try {
       await db.query(
         `UPDATE users
           SET last_login_at = current_timestamp
           WHERE username = $1`,
-          [username]
-      )
-    } catch(err){
+        [username]
+      );
+    } catch (err) {
       throw new BadRequestError(`Could not find ${username}`);
     }
 
@@ -74,7 +74,7 @@ class User {
     const result = await db.query(
       `SELECT username, first_name, last_name
         FROM users`
-    )
+    );
 
     return result.rows;
   }
@@ -93,10 +93,10 @@ class User {
       `SELECT username, first_name, last_name, phone, join_at, last_login_at
         FROM users
         WHERE username = $1`,
-        [username]
-    )
+      [username]
+    );
 
-    const user = result.rows[0]
+    const user = result.rows[0];
     if (user === undefined) throw new BadRequestError(`Could not find ${username}`);
 
     return user;
@@ -112,18 +112,42 @@ class User {
    */
 
   static async messagesFrom(username) {
+    User.checkUser(username);
+
     const result = await db.query(
-    //   `SELECT id, body, sent_at, read_at,
-    //     (users.username, first_name, last_name, phone) AS to_user
-    //     FROM users
-    //     JOIN messages ON messages.from_username = $1`,
-    //     [username]
-    // );
-    //FIXME: Does this ^ work? Maybe! Probably not
-    // Otherwise query messages and then loop through and query user data
+      `SELECT id, body, sent_at, read_at,
+        users.username, first_name, last_name, phone
+        FROM users
+        JOIN messages
+        ON messages.from_username = $1
+        WHERE username = $1`,
+      [username]
+    );
 
-    return result.rows;
+    const structureMessages = result.rows.map(m => {
+      m.to_user = {
+        username: m.username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone
+      };
+      // const { id, to_user, body, sent_at, read_at } = m;
+      console.log({
+        id: m.id,
+        to_user: m.to_user,
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at }, "THIS IS M")
 
+      return {
+        id: m.id,
+        to_user: m.to_user,
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at };
+    });
+    console.log(structureMessages, "STRUCT MESSAGES")
+    return structureMessages;
   }
 
   /** Return messages to this user.
@@ -135,7 +159,46 @@ class User {
    */
 
   static async messagesTo(username) {
+    User.checkUser(username);
+
+    const result = await db.query(
+      `SELECT id, from_username, body, sent_at, read_at,
+        users.username, first_name, last_name, phone
+        FROM users
+        JOIN messages
+        ON messages.to_username = $1
+        WHERE username = $1`,
+      [username]
+    );
+
+    const structureMessages = result.rows.map(m => {
+      m.from_user = {
+        username: m.username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone
+      };
+      const { id, from_user, body, sent_at, read_at } = m;
+      return { id, from_user, body, sent_at, read_at };
+    });
+
+    return structureMessages;
   }
+
+  /** Checks that a username exists in database */
+  static async checkUser(username) {
+    const result = await db.query(
+      `SELECT username
+        FROM users
+        WHERE username = $1`,
+      [username]
+    );
+
+    if (!result.rows[0]) {
+      throw new BadRequestError(`Could not find ${username}`);
+    }
+  }
+
 }
 
 
