@@ -115,8 +115,7 @@ class User {
     User.checkUser(username);
 
     const result = await db.query(
-      `SELECT id, body, sent_at, read_at,
-        users.username, first_name, last_name, phone
+      `SELECT id, body, sent_at, read_at, to_username AS to_user
         FROM users
         JOIN messages
         ON messages.from_username = $1
@@ -124,30 +123,21 @@ class User {
       [username]
     );
 
-    const structureMessages = result.rows.map(m => {
-      m.to_user = {
-        username: m.username,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        phone: m.phone
-      };
-      // const { id, to_user, body, sent_at, read_at } = m;
-      console.log({
-        id: m.id,
-        to_user: m.to_user,
-        body: m.body,
-        sent_at: m.sent_at,
-        read_at: m.read_at }, "THIS IS M")
+    const messages = result.rows;
+    for (const m of messages) {
 
-      return {
-        id: m.id,
-        to_user: m.to_user,
-        body: m.body,
-        sent_at: m.sent_at,
-        read_at: m.read_at };
-    });
-    console.log(structureMessages, "STRUCT MESSAGES")
-    return structureMessages;
+      const toUserData = await db.query(
+        `SELECT users.username, first_name, last_name, phone
+          FROM users
+          WHERE username = $1`,
+        [m.to_user]
+      );
+
+      m.to_user = toUserData.rows[0];
+      console.log("!!!MESSAGE:", m);
+    }
+
+    return messages;
   }
 
   /** Return messages to this user.
@@ -162,8 +152,7 @@ class User {
     User.checkUser(username);
 
     const result = await db.query(
-      `SELECT id, from_username, body, sent_at, read_at,
-        users.username, first_name, last_name, phone
+      `SELECT id, body, sent_at, read_at, from_username AS from_user
         FROM users
         JOIN messages
         ON messages.to_username = $1
@@ -171,21 +160,24 @@ class User {
       [username]
     );
 
-    const structureMessages = result.rows.map(m => {
-      m.from_user = {
-        username: m.username,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        phone: m.phone
-      };
-      const { id, from_user, body, sent_at, read_at } = m;
-      return { id, from_user, body, sent_at, read_at };
-    });
+    const messages = result.rows;
+    for (const m of messages) {
 
-    return structureMessages;
+      const fromUserData = await db.query(
+        `SELECT users.username, first_name, last_name, phone
+          FROM users
+          WHERE username = $1`,
+        [m.from_user]
+      );
+
+      m.from_user = fromUserData.rows[0];
+      console.log("!!!MESSAGE:", m);
+    }
+
+    return messages;
   }
 
-  /** Checks that a username exists in database */
+  /** Checks that a username exists in database, throws error if not found */
   static async checkUser(username) {
     const result = await db.query(
       `SELECT username
@@ -194,7 +186,7 @@ class User {
       [username]
     );
 
-    if (!result.rows[0]) {
+    if (result.rows[0] === undefined) {
       throw new BadRequestError(`Could not find ${username}`);
     }
   }
