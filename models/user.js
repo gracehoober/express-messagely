@@ -2,7 +2,8 @@
 const db = require("../db");
 const bcrypt = require("bcrypt");
 const { BCRYPT_WORK_FACTOR } = require("../config");
-const { BadRequestError } = require("../expressError");
+const { BadRequestError, NotFoundError, UnauthorizedError } = require("../expressError");
+const bodyParser = require("body-parser");
 /** User of the site. */
 
 class User {
@@ -44,31 +45,26 @@ class User {
     );
 
     const user = result.rows[0];
-    //FIXME: This error should be UnauthorizedError, for security
-    if (user === undefined) throw new BadRequestError(`Could not find ${username}`);
+    if (user === undefined) throw new UnauthorizedError(`Unauthorized access`);
 
-    //TODO: Can just return this boolean:
-    if (await bcrypt.compare(password, user.password) === true) {
-      return true;
-    } else {
-      return false;
-    }
+   return await bcrypt.compare(password, user.password) === true;
   }
 
   /** Update last_login_at for user */
 
   static async updateLoginTimestamp(username) {
-    try {
-      await db.query(
+
+    let result = await db.query(
         `UPDATE users
           SET last_login_at = current_timestamp
-          WHERE username = $1`, //FIXME: put RETURNING statement, and handle error based on that
+          WHERE username = $1
+          RETURNING username`,
         [username]
       );
-    } catch (err) {
-      throw new BadRequestError(`Could not find ${username}`); //TODO: NotFound()
-    }
 
+    if(result.rows[0] === undefined) {
+      throw new NotFoundError(`Could not find ${username}`);
+    }
   }
 
   /** All: basic info on all users:
@@ -77,7 +73,8 @@ class User {
   static async all() {
     const result = await db.query(
       `SELECT username, first_name, last_name
-        FROM users` //TODO: ORDER BY
+        FROM users
+        ORDER BY username`
     );
 
     return result.rows;
@@ -116,30 +113,26 @@ class User {
    */
 
   static async messagesFrom(username) {
-    User.checkUser(username);
 
     const result = await db.query(
-      `SELECT id, body, sent_at, read_at, to_username AS to_user
-        FROM users
-        JOIN messages
-        ON messages.from_username = $1
-        WHERE username = $1`,
+      `SELECT id, body, sent_at, read_at, to_username,first_name, last_name, phone
+        FROM messages
+        JOIN users
+        ON messages.to_username = username
+        WHERE messages.from_username = $1`,
       [username]
     );
 
-    const messages = result.rows;
-    for (const m of messages) {
-
-      const toUserData = await db.query(
-        `SELECT users.username, first_name, last_name, phone
-          FROM users
-          WHERE username = $1`,
-        [m.to_user]
-      );
-
-      m.to_user = toUserData.rows[0];
-      console.log("!!!MESSAGE:", m);
-    }
+    const messages = result.rows.map(m => {
+      m.to_user = {
+        username: m.to_username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone
+      }
+      const { id, to_user, body, sent_at, read_at } = m;
+      return { id, to_user, body, sent_at, read_at }
+    })
 
     return messages;
   }
@@ -153,47 +146,43 @@ class User {
    */
 
   static async messagesTo(username) {
-    User.checkUser(username);
 
     const result = await db.query(
-      `SELECT id, body, sent_at, read_at, from_username AS from_user
-        FROM users
-        JOIN messages
-        ON messages.to_username = $1
-        WHERE username = $1`,
+      `SELECT id, body, sent_at, read_at, from_username, first_name, last_name, phone
+        FROM messages
+        JOIN users
+        ON messages.from_username = username
+        WHERE messages.to_username = $1`,
       [username]
     );
 
-    const messages = result.rows;
-    for (const m of messages) {
-
-      const fromUserData = await db.query(
-        `SELECT users.username, first_name, last_name, phone
-          FROM users
-          WHERE username = $1`,
-        [m.from_user]
-      );
-
-      m.from_user = fromUserData.rows[0];
-      console.log("!!!MESSAGE:", m);
-    }
+    const messages = result.rows.map(m => {
+      m.from_user = {
+        username: m.from_username,
+        first_name: m.first_name,
+        last_name: m.last_name,
+        phone: m.phone
+      }
+      const { id, from_user, body, sent_at, read_at } = m;
+      return { id, from_user, body, sent_at, read_at }
+    })
 
     return messages;
   }
 
   /** Checks that a username exists in database, throws error if not found */
-  static async checkUser(username) {
-    const result = await db.query(
-      `SELECT username
-        FROM users
-        WHERE username = $1`,
-      [username]
-    );
+  // static async checkUser(username) {
+  //   const result = await db.query(
+  //     `SELECT username
+  //       FROM users
+  //       WHERE username = $1`,
+  //     [username]
+  //   );
 
-    if (result.rows[0] === undefined) {
-      throw new BadRequestError(`Could not find ${username}`);
-    }
-  }
+  //   if (result.rows[0] === undefined) {
+  //     throw new BadRequestError(`Could not find ${username}`);
+  //   }
+  // }
 
 }
 
