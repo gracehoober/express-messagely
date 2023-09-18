@@ -13,7 +13,9 @@ class User {
 
   static async register({ username, password, first_name, last_name, phone }) {
     const hashedPassword = await bcrypt.hash(
-      password, BCRYPT_WORK_FACTOR);
+      password,
+      BCRYPT_WORK_FACTOR
+    );
 
     const result = await db.query(
       `INSERT INTO users (username,
@@ -42,8 +44,10 @@ class User {
     );
 
     const user = result.rows[0];
+    //FIXME: This error should be UnauthorizedError, for security
     if (user === undefined) throw new BadRequestError(`Could not find ${username}`);
 
+    //TODO: Can just return this boolean:
     if (await bcrypt.compare(password, user.password) === true) {
       return true;
     } else {
@@ -58,11 +62,11 @@ class User {
       await db.query(
         `UPDATE users
           SET last_login_at = current_timestamp
-          WHERE username = $1`,
+          WHERE username = $1`, //FIXME: put RETURNING statement, and handle error based on that
         [username]
       );
     } catch (err) {
-      throw new BadRequestError(`Could not find ${username}`);
+      throw new BadRequestError(`Could not find ${username}`); //TODO: NotFound()
     }
 
   }
@@ -73,7 +77,7 @@ class User {
   static async all() {
     const result = await db.query(
       `SELECT username, first_name, last_name
-        FROM users`
+        FROM users` //TODO: ORDER BY
     );
 
     return result.rows;
