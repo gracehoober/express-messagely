@@ -17,6 +17,7 @@ router.post("/login", async function (req, res) {
   if (!(await User.authenticate(username, password))) {
     throw new UnauthorizedError("Unauthorized Access");
   }
+  User.updateLoginTimestamp(username);
 
   const payload = { username };
   const token = jwt.sign(payload, SECRET_KEY);
@@ -35,7 +36,10 @@ router.post("/register", async function (req, res) {
   const newUser = await User.register(req.body);
   if(!newUser) throw new BadRequestError("Could not create user")
 
-  const payload = { username: req.body.username };
+  const { username } = req.body;
+  User.updateLoginTimestamp(username);
+
+  const payload = { username };
   const token = jwt.sign(payload, SECRET_KEY);
 
   return res.status(201).json(token);
