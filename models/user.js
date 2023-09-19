@@ -45,9 +45,8 @@ class User {
     );
 
     const user = result.rows[0];
-    if (user === undefined) throw new UnauthorizedError(`Unauthorized access`);
-
-   return await bcrypt.compare(password, user.password) === true;
+    if (!user) return false;
+    return await bcrypt.compare(password, user.password) === true;
   }
 
   /** Update last_login_at for user */
@@ -55,14 +54,14 @@ class User {
   static async updateLoginTimestamp(username) {
 
     let result = await db.query(
-        `UPDATE users
+      `UPDATE users
           SET last_login_at = current_timestamp
           WHERE username = $1
           RETURNING username`,
-        [username]
-      );
+      [username]
+    );
 
-    if(result.rows[0] === undefined) {
+    if (result.rows[0] === undefined) {
       throw new NotFoundError(`Could not find ${username}`);
     }
   }
@@ -135,8 +134,8 @@ class User {
         body: m.body,
         sent_at: m.sent_at,
         read_at: m.read_at
-      }
-    })
+      };
+    });
 
     return messages;
   }
@@ -172,8 +171,8 @@ class User {
         body: m.body,
         sent_at: m.sent_at,
         read_at: m.read_at
-      }
-    })
+      };
+    });
 
     return messages;
   }
