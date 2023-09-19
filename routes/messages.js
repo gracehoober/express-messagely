@@ -21,7 +21,7 @@ const router = new Router();
  * Makes sure that the currently-logged-in users is either the to or from user.
  *
  **/
-
+//FIXME: get rid of authenticateJWT
 router.get("/:id", authenticateJWT, ensureLoggedIn, async function (req, res) {
   const message = await Message.get(req.params.id);
 
@@ -75,7 +75,7 @@ router.post(
 
     const message = await Message.get(id);
     const currentUser = res.locals.user.username;
-    
+
     if (!(message.to_user.username === currentUser)) {
       throw new UnauthorizedError("Unauthorized access");
     }

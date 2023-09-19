@@ -22,7 +22,7 @@ router.post("/login", async function (req, res) {
   const payload = { username };
   const token = jwt.sign(payload, SECRET_KEY);
 
-  return res.json(token);
+  return res.json(token);//FIXME: want in an obj
 });
 
 /** POST /register: registers, logs in, and returns token.
@@ -37,12 +37,12 @@ router.post("/register", async function (req, res) {
   if(!newUser) throw new BadRequestError("Could not create user")
 
   const { username } = req.body;
-  User.updateLoginTimestamp(username);
+  User.updateLoginTimestamp(username);//TODO: do not want this to be set in this case due to design preferences
 
   const payload = { username };
   const token = jwt.sign(payload, SECRET_KEY);
 
-  return res.status(201).json(token);
+  return res.status(201).json(token); //FIXME: want in an obj
 });
 
 module.exports = router;

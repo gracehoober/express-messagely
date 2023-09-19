@@ -55,7 +55,7 @@ router.get(
 router.get(
   "/:username/to",
   authenticateJWT,
-  ensureLoggedIn,
+  ensureLoggedIn,//FIXME: not needed see auth.js
   ensureCorrectUser,
   async function (req, res) {
     const messages = await User.messagesTo(req.params.username);
