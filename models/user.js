@@ -24,10 +24,10 @@ class User {
         first_name,
         last_name,
         phone,
-        join_at,
-        last_login_at)
+        join_at
+        )
       VALUES
-      ($1, $2, $3, $4, $5, current_timestamp, current_timestamp)
+      ($1, $2, $3, $4, $5, current_timestamp)
       RETURNING username, password, first_name, last_name, phone`,
       [username, hashedPassword, first_name, last_name, phone]
     );
@@ -124,14 +124,18 @@ class User {
     );
 
     const messages = result.rows.map(m => {
-      m.to_user = {
-        username: m.to_username,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        phone: m.phone
+      return {
+        id: m.id,
+        to_user: {
+          username: m.to_username,
+          first_name: m.first_name,
+          last_name: m.last_name,
+          phone: m.phone
+        },
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at
       }
-      const { id, to_user, body, sent_at, read_at } = m;
-      return { id, to_user, body, sent_at, read_at }
     })
 
     return messages;
@@ -157,14 +161,18 @@ class User {
     );
 
     const messages = result.rows.map(m => {
-      m.from_user = {
-        username: m.from_username,
-        first_name: m.first_name,
-        last_name: m.last_name,
-        phone: m.phone
+      return {
+        id: m.id,
+        from_user: {
+          username: m.from_username,
+          first_name: m.first_name,
+          last_name: m.last_name,
+          phone: m.phone
+        },
+        body: m.body,
+        sent_at: m.sent_at,
+        read_at: m.read_at
       }
-      const { id, from_user, body, sent_at, read_at } = m;
-      return { id, from_user, body, sent_at, read_at }
     })
 
     return messages;
